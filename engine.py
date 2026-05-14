@@ -75,6 +75,78 @@ def phase1_decrypt(text, key):
     return result
 
 
+def phase2_encrypt(text, key):
+    """
+    Phase 2: Transposition — Rearrange character positions.
+
+    Uses block reversal: split into blocks and reverse each one.
+    This layer changes WHERE each character is (its position).
+
+    Args:
+        text: The string to transform (already Phase 1 encrypted)
+        key: Dictionary containing encryption settings
+
+    Returns:
+        The transposed string with characters rearranged
+    """
+    # Get block size from key (default to 4 if not specified)
+    block_size = key.get("block_size", 4)
+
+    result = ""
+
+    # Process text in chunks of block_size
+    for i in range(0, len(text), block_size):
+        # Extract this block (might be shorter at the end)
+        block = text[i : i + block_size]
+        # Reverse the block and add to result
+        result += block[::-1]
+
+    return result
+
+
+def phase2_decrypt(text, key):
+    """
+    Phase 2: Reverse the transposition.
+
+    For block reversal, decryption is the same as encryption!
+    Reversing a reversed block returns the original.
+
+    Args:
+        text: The transposed string
+        key: Dictionary containing the same encryption settings
+
+    Returns:
+        The un-transposed string
+    """
+    # Block reversal is self-inverting: encrypt == decrypt
+    # Reverse twice = original!
+    block_size = key.get("block_size", 4)
+
+    result = ""
+    for i in range(0, len(text), block_size):
+        block = text[i : i + block_size]
+        result += block[::-1]
+
+    return result
+
+
+from engine import phase2_encrypt, phase2_decrypt
+
+# Test with block size 4
+key = {"block_size": 4}
+
+original = "Hello World!"
+print(f"Original: {original}")
+
+encrypted = phase2_encrypt(original, key)
+print(f"Encrypted: {encrypted}")
+
+decrypted = phase2_decrypt(encrypted, key)
+print(f"Decrypted: {decrypted}")
+
+print(f"Match: {decrypted == original}")
+
+
 def encrypt(text, key):
     """
     CipherForge Master Encryption — Applies all 5 phases.
