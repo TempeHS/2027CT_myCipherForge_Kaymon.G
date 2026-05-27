@@ -116,13 +116,13 @@ def phase4_decrypt(text, key):
 
 
 def phase5_encrypt(text, key):
-    """Phase 5: Wild Card — swap every pair of adjacent characters."""
+    """Phase 5: Wild Card — reverse the whole text"""
     result = text[::-1]
     return result
 
 
 def phase5_decrypt(text, key):
-    """Phase 5: Swap every pair back (self-inverse)."""
+    """Phase 5: Reverse it back"""
     result = text[::-1]
     return result
 
