@@ -3,10 +3,26 @@
 Provides a web interface for the 5-phase encryption algorithm.
 """
 
+# At the top of app.py, add:
+from database import init_db, register_user, verify_user
+
+# Initialize database when app starts
+init_db()
+
 from flask import Flask, render_template, request
 from engine import encrypt, decrypt
 
 app = Flask(__name__)
+import os
+from functools import wraps
+from flask import session, redirect, url_for
+
+app.secret_key = os.urandom(24)  # Required for sessions
+
+# Store users (in real apps, use a database with hashed passwords!)
+# SECURITY NOTE: Never store plain text passwords in production.
+# Use werkzeug.security.generate_password_hash() to hash passwords.
+USERS = {"admin": "supersecret", "student": "password123"}
 
 
 @app.route("/")
@@ -15,7 +31,45 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Handle login form using database."""
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+
+        # Use database verification instead of dictionary
+        if verify_user(username, password):
+            session["logged_in"] = True
+            session["username"] = username
+            return redirect(url_for("workshop"))
+        else:
+            return render_template("login.html", error="Invalid credentials")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    """Log out the current user."""
+    session.clear()
+    return redirect(url_for("index"))
+
+
+def login_required(f):
+    """Decorator that ensures user is logged in."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @app.route("/workshop", methods=["GET", "POST"])
+@login_required  # ← NEW: must be AFTER @app.route, BEFORE def
 def workshop():
     """Handle encryption and decryption requests."""
     result = ""
@@ -52,6 +106,37 @@ def workshop():
     return render_template(
         "workshop.html", result=result, original=original, error=error
     )
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Handle user registration."""
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm", "")
+
+        # Validation
+        if len(username) < 3:
+            return render_template(
+                "register.html", error="Username must be at least 3 characters"
+            )
+
+        if len(password) < 8:
+            return render_template(
+                "register.html", error="Password must be at least 8 characters"
+            )
+
+        if password != confirm:
+            return render_template("register.html", error="Passwords don't match")
+
+        # Try to register
+        if register_user(username, password):
+            return redirect(url_for("login"))
+        else:
+            return render_template("register.html", error="Username already exists")
+
+    return render_template("register.html")
 
 
 if __name__ == "__main__":
